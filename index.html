@@ -1,0 +1,68 @@
+/* Discord Glass Frontend Client */
+const wsUrl = 'ws://localhost:8080';
+const socket = new WebSocket(wsUrl);
+
+socket.onopen = () => {
+    console.log('[HUD] Connected to local bridge server');
+    // Request initial data once connected
+    socket.send(JSON.stringify({ type: 'FETCH_SERVERS' }));
+};
+
+socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    handleServerEvent(data);
+};
+
+socket.onclose = () => {
+    console.warn('[HUD] Disconnected from bridge server. Reconnecting...');
+    setTimeout(() => location.reload(), 5000);
+};
+
+function handleServerEvent(data) {
+    switch (data.type) {
+        case 'INITIAL_SYNC':
+            renderSidebar(data.guilds);
+            break;
+
+        case 'SERVER_LIST':
+            renderSidebar(data.guilds);
+            break;
+
+        case 'VOICE_CHANNELS_LIST':
+            renderVoiceChannels(data.voiceChannels);
+            break;
+
+        case 'VOICE_STATE_CHANGE':
+            console.log(`[HUD] Voice event: ${data.event} for ${data.username}`);
+            // Auto-refresh the active voice channel list
+            // Or you could build specific DOM animation logic here
+            break;
+    }
+}
+
+function renderSidebar(guilds) {
+    const container = document.getElementById('servers-list');
+    container.innerHTML = guilds.map(guild => `
+        <div class="speaker-item" onclick="fetchVoiceChannels('${guild.id}')">
+            ${guild.name}
+        </div>
+    `).join('');
+}
+
+function fetchVoiceChannels(guildId) {
+    socket.send(JSON.stringify({ type: 'FETCH_VOICE_CHANNELS', guildId }));
+}
+
+function renderVoiceChannels(channels) {
+    const container = document.getElementById('voice-speakers');
+    container.innerHTML = channels.map(channel => `
+        <div style="margin-top:20px;">
+            <strong style="color:#00FFCC">🔊 ${channel.name}</strong>
+            ${channel.members.map(member => `
+                <div class="speaker-item ${member.isMuted ? 'muted' : ''}">
+                    ${member.username} 🔊
+                </div>
+            `).join('')}
+        </div>
+    `).join('');
+}
