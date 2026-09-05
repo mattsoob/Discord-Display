@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Discord - Sofia and Sharon The Midnig...</title>
+  <title>Discord Web Client</title>
   <style>
     :root {
       --bg-darkest: #0b0e14;
@@ -16,7 +16,7 @@
       --text-normal: #dbdee1;
       --text-muted: #80848e;
       --text-header: #f2f3f5;
-      --border-color: #2b2f3a;
+      --text-positive: #23a55a;
     }
 
     * {
@@ -35,7 +35,7 @@
       font-size: 14px;
     }
 
-    /* 1. Far-Left Server Bar */
+    /* 1. Server Bar */
     .server-bar {
       width: 72px;
       background-color: var(--bg-server-bar);
@@ -60,17 +60,12 @@
       color: var(--text-normal);
       cursor: pointer;
       transition: all 0.2s ease;
-      position: relative;
     }
 
-    .server-icon:hover {
+    .server-icon:hover, .server-icon.active {
       border-radius: 16px;
       background-color: var(--accent-blurple);
-    }
-
-    .server-icon.active {
-      border-radius: 16px;
-      background-color: var(--accent-blurple);
+      color: #fff;
     }
 
     /* 2. Channel Sidebar */
@@ -92,7 +87,6 @@
       font-size: 15px;
       color: var(--text-header);
       border-bottom: 1px solid var(--bg-darkest);
-      box-shadow: 0 1px 2px rgba(0,0,0,0.2);
     }
 
     .channels-container {
@@ -130,9 +124,19 @@
       color: #fff;
     }
 
-    .channel-icon {
-      font-size: 16px;
+    .voice-user {
+      margin-left: 20px;
+      font-size: 12px;
+      padding: 2px 6px;
       color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .voice-user.speaking {
+      color: var(--text-positive);
+      font-weight: bold;
     }
 
     /* User Footer */
@@ -156,23 +160,20 @@
       height: 32px;
       border-radius: 50%;
       background-color: var(--accent-blurple);
-    }
-
-    .user-details {
       display: flex;
-      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
     }
 
-    .user-name {
-      font-weight: 600;
-      font-size: 13px;
-      color: var(--text-header);
+    .status-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: var(--text-muted);
     }
 
-    .user-status {
-      font-size: 11px;
-      color: var(--text-muted);
-    }
+    .status-indicator.online { background-color: var(--text-positive); }
 
     /* 3. Main Chat View */
     .chat-area {
@@ -199,46 +200,29 @@
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 12px;
     }
 
-    .welcome-banner {
-      margin-top: auto;
-    }
-
-    .welcome-title {
-      font-size: 32px;
-      font-weight: 700;
-      color: var(--text-header);
-      margin-bottom: 8px;
-    }
-
-    .welcome-sub {
-      color: var(--text-muted);
-      margin-bottom: 16px;
-    }
-
-    .embed-card {
-      background-color: var(--bg-card);
-      border-left: 4px solid var(--accent-blurple);
-      border-radius: 4px;
-      padding: 12px 16px;
-      max-width: 430px;
-      margin-top: 8px;
-    }
-
-    .embed-title {
-      font-weight: 700;
-      color: var(--text-header);
-      margin-bottom: 8px;
+    .msg-row {
       display: flex;
-      align-items: center;
-      gap: 6px;
+      gap: 12px;
     }
 
-    .embed-body {
+    .msg-content {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .msg-author {
+      font-weight: 600;
+      color: var(--text-header);
       font-size: 13px;
+      margin-bottom: 2px;
+    }
+
+    .msg-text {
       color: var(--text-normal);
+      font-size: 14px;
       line-height: 1.4;
     }
 
@@ -279,192 +263,244 @@
       gap: 8px;
       padding: 6px 8px;
       border-radius: 4px;
-      cursor: pointer;
     }
 
-    .member-item:hover {
-      background-color: rgba(255, 255, 255, 0.05);
-    }
-
-    .member-avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background-color: #3b4050;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .connection-banner {
+      background-color: #ed4245;
+      color: white;
+      text-align: center;
+      padding: 4px;
       font-size: 12px;
-      font-weight: bold;
-    }
-
-    .member-info {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .member-name {
-      font-weight: 500;
-      color: var(--text-normal);
-      font-size: 13px;
-    }
-
-    .member-subtext {
-      font-size: 11px;
-      color: var(--text-muted);
+      display: none;
     }
   </style>
 </head>
 <body>
 
-  <div class="server-bar" id="servers-list">
-    </div>
+  <!-- Far-Left Server Bar -->
+  <div class="server-bar" id="servers-list"></div>
 
+  <!-- Channel Sidebar -->
   <div class="channel-sidebar">
     <div>
       <div class="server-header">
-        <span>Sofia and Sharon The Midnig...</span>
-        <span>∨</span>
+        <span id="current-server-name">Select Server</span>
       </div>
       <div class="channels-container">
-        <div class="channel-item"><span class="channel-icon">📅</span> Events</div>
-        
-        <div class="category-title">Information Center</div>
-        <div class="channel-item"><span class="channel-icon">#</span> joins-and-leaves</div>
-        <div class="channel-item active"><span class="channel-icon">#</span> welcome</div>
-        <div class="channel-item"><span class="channel-icon">#</span> verify</div>
-
-        <div class="category-title">Community Channels</div>
-        <div class="channel-item"><span class="channel-icon">#</span> general-chat</div>
-        <div class="channel-item"><span class="channel-icon">#</span> public-media</div>
+        <div class="category-title">Text Channels</div>
+        <div id="text-channels"></div>
 
         <div class="category-title">Voice Channels</div>
-        <div id="voice-speakers">
-          </div>
+        <div id="voice-channels"></div>
       </div>
     </div>
 
     <div class="user-footer">
       <div class="user-info">
-        <div class="user-avatar"></div>
-        <div class="user-details">
-          <span class="user-name">Monkey Man</span>
-          <span class="user-status">Online</span>
+        <div class="user-avatar" id="user-avatar-btn">M</div>
+        <div style="display: flex; flex-direction: column;">
+          <span class="user-name" style="font-weight: 600; font-size: 13px;" id="user-display-name">Matthew Plays</span>
+          <span style="font-size: 11px; color: var(--text-muted);" id="connection-status">Connecting...</span>
         </div>
       </div>
+      <div class="status-indicator" id="status-dot"></div>
     </div>
   </div>
 
+  <!-- Central Chat Area -->
   <div class="chat-area">
+    <div class="connection-banner" id="ws-error-banner">
+      WebSocket Disconnected. Attempting reconnection...
+    </div>
+    
     <div class="chat-header">
       <span style="color: var(--text-muted); font-size: 20px;">#</span>
-      <span>welcome</span>
+      <span id="current-channel-name">welcome</span>
     </div>
 
-    <div class="chat-messages">
-      <div class="welcome-banner">
-        <div class="welcome-title">Welcome to #welcome!</div>
-        <div class="welcome-sub">This is the start of the #welcome channel.</div>
-      </div>
-
-      <div class="embed-card">
-        <div class="embed-title">
-          <span>🎵</span> Musico Joined the Party!
-        </div>
-        <div class="embed-body">
-          Thanks for adding me to <strong>sofia and sharon server</strong>.<br>
-          I'm your all-in-one music bot – fast, minimal, and vibe-ready.<br><br>
-          <strong>🚀 Get Started:</strong><br>
-          • <code>/play</code> - Start playing any song.<br>
-          • <code>/help</code> - View all available commands.
+    <div class="chat-messages" id="chat-messages">
+      <div class="msg-row">
+        <div class="user-avatar">System</div>
+        <div class="msg-content">
+          <span class="msg-author">System Bot</span>
+          <span class="msg-text">Client UI initialized. Connecting to WebSocket bridge...</span>
         </div>
       </div>
     </div>
 
     <div class="chat-input-wrapper">
-      <input type="text" class="chat-input" placeholder="Message #welcome">
+      <input type="text" class="chat-input" id="chat-input-field" placeholder="Message #welcome" onkeypress="handleKeyPress(event)">
     </div>
   </div>
 
+  <!-- Right Member List -->
   <div class="member-sidebar">
-    <div class="member-category">Owner — 1</div>
-    <div class="member-item">
-      <div class="member-avatar" style="background-color: #5865f2;">S</div>
-      <div class="member-info">
-        <span class="member-name" style="color: #3498db;">Sofag23</span>
-        <span class="member-subtext">In voice</span>
-      </div>
-    </div>
-
-    <div class="member-category">Co Owner Role — 1</div>
-    <div class="member-item">
-      <div class="member-avatar" style="background-color: #e91e63;">S</div>
-      <div class="member-info">
-        <span class="member-name" style="color: #e91e63;">Sharon</span>
-      </div>
-    </div>
-
-    <div class="member-category">Bots — 4</div>
-    <div class="member-item">
-      <div class="member-avatar">M</div>
-      <div class="member-info">
-        <span class="member-name">Musico <span style="background: #5865f2; font-size: 9px; padding: 1px 4px; border-radius: 3px; color: #fff;">BOT</span></span>
-      </div>
-    </div>
+    <div class="member-category">Online Members</div>
+    <div id="members-list"></div>
   </div>
 
   <script>
-    const wsUrl = 'ws://localhost:8080';
-    const socket = new WebSocket(wsUrl);
+    // Configurable WebSocket URL (HTTPS requires wss:// or proxy)
+    const isSecure = window.location.protocol === 'https:';
+    const wsUrl = isSecure ? 'wss://localhost:8080' : 'ws://localhost:8080';
+    
+    let socket = null;
+    let activeGuildId = null;
+    let activeChannel = 'welcome';
 
-    socket.onopen = () => {
-      console.log('[HUD] Connected to local bridge server');
-      socket.send(JSON.stringify({ type: 'FETCH_SERVERS' }));
-    };
+    function initWebSocket() {
+      try {
+        socket = new WebSocket(wsUrl);
 
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      handleServerEvent(data);
-    };
+        socket.onopen = () => {
+          document.getElementById('connection-status').innerText = 'Connected';
+          document.getElementById('status-dot').classList.add('online');
+          document.getElementById('ws-error-banner').style.display = 'none';
+          socket.send(JSON.stringify({ type: 'FETCH_SERVERS' }));
+        };
+
+        socket.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            handleServerEvent(data);
+          } catch (e) {
+            console.error('Data parsing error:', e);
+          }
+        };
+
+        socket.onclose = () => {
+          document.getElementById('connection-status').innerText = 'Disconnected';
+          document.getElementById('status-dot').classList.remove('online');
+          document.getElementById('ws-error-banner').style.display = 'block';
+          setTimeout(initWebSocket, 5000);
+        };
+
+        socket.onerror = (err) => {
+          console.warn('WebSocket connection error:', err);
+        };
+      } catch (err) {
+        console.error('Socket initialization failed:', err);
+      }
+    }
 
     function handleServerEvent(data) {
       switch (data.type) {
         case 'INITIAL_SYNC':
         case 'SERVER_LIST':
-          renderSidebar(data.guilds);
+          renderServers(data.guilds || []);
           break;
         case 'VOICE_CHANNELS_LIST':
-          renderVoiceChannels(data.voiceChannels);
+          renderVoiceChannels(data.voiceChannels || []);
+          break;
+        case 'MESSAGE_CREATE':
+          appendMessage(data.author, data.content);
           break;
       }
     }
 
-    function renderSidebar(guilds) {
+    function renderServers(guilds) {
       const container = document.getElementById('servers-list');
-      if (!container || !guilds) return;
+      if (!guilds.length) {
+        container.innerHTML = `<div class="server-icon active">S</div>`;
+        return;
+      }
 
       container.innerHTML = guilds.map((guild, idx) => `
-        <div class="server-icon ${idx === 0 ? 'active' : ''}" onclick="fetchVoiceChannels('${guild.id}')" title="${guild.name}">
+        <div class="server-icon ${idx === 0 ? 'active' : ''}" 
+             onclick="selectServer('${guild.id}', '${guild.name}', this)">
           ${guild.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
         </div>
       `).join('');
+
+      if (guilds.length > 0 && !activeGuildId) {
+        selectServer(guilds[0].id, guilds[0].name, container.children[0]);
+      }
     }
 
-    function fetchVoiceChannels(guildId) {
-      socket.send(JSON.stringify({ type: 'FETCH_VOICE_CHANNELS', guildId }));
+    function selectServer(guildId, guildName, element) {
+      activeGuildId = guildId;
+      document.getElementById('current-server-name').innerText = guildName;
+      
+      document.querySelectorAll('.server-icon').forEach(el => el.classList.remove('active'));
+      if (element) element.classList.add('active');
+
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'FETCH_VOICE_CHANNELS', guildId }));
+      }
+      
+      // Default text channels
+      renderTextChannels(['welcome', 'general-chat', 'public-media']);
     }
 
-    function renderVoiceChannels(channels) {
-      const container = document.getElementById('voice-speakers');
-      if (!container || !channels) return;
-
-      container.innerHTML = channels.map(channel => `
-        <div class="channel-item">
-          <span class="channel-icon">🔊</span>
-          <span>${channel.name}</span>
+    function renderTextChannels(channels) {
+      const container = document.getElementById('text-channels');
+      container.innerHTML = channels.map(ch => `
+        <div class="channel-item ${ch === activeChannel ? 'active' : ''}" onclick="selectChannel('${ch}', this)">
+          <span style="color: var(--text-muted)">#</span> ${ch}
         </div>
       `).join('');
     }
+
+    function selectChannel(channelName, el) {
+      activeChannel = channelName;
+      document.getElementById('current-channel-name').innerText = channelName;
+      document.getElementById('chat-input-field').placeholder = `Message #${channelName}`;
+      
+      document.querySelectorAll('#text-channels .channel-item').forEach(e => e.classList.remove('active'));
+      if (el) el.classList.add('active');
+    }
+
+    function renderVoiceChannels(channels) {
+      const container = document.getElementById('voice-channels');
+      container.innerHTML = channels.map(channel => `
+        <div class="channel-item">
+          <span>🔊</span>
+          <span>${channel.name}</span>
+        </div>
+        ${(channel.members || []).map(member => `
+          <div class="voice-user ${member.isSpeaking ? 'speaking' : ''}">
+            <span>🎙️</span> ${member.username}
+          </div>
+        `).join('')}
+      `).join('');
+    }
+
+    function handleKeyPress(e) {
+      if (e.key === 'Enter') {
+        const input = document.getElementById('chat-input-field');
+        const text = input.value.trim();
+        if (text) {
+          appendMessage('Matthew Plays', text);
+          if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({
+              type: 'SEND_MESSAGE',
+              guildId: activeGuildId,
+              channel: activeChannel,
+              content: text
+            }));
+          }
+          input.value = '';
+        }
+      }
+    }
+
+    function appendMessage(author, content) {
+      const chatContainer = document.getElementById('chat-messages');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'msg-row';
+      msgDiv.innerHTML = `
+        <div class="user-avatar">${author[0].toUpperCase()}</div>
+        <div class="msg-content">
+          <span class="msg-author">${author}</span>
+          <span class="msg-text">${content}</span>
+        </div>
+      `;
+      chatContainer.appendChild(msgDiv);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // Start WebSocket Connection
+    initWebSocket();
   </script>
 </body>
 </html>
