@@ -340,167 +340,167 @@
   </div>
 
   <script>
-    // Configurable WebSocket URL (HTTPS requires wss:// or proxy)
-    const isSecure = window.location.protocol === 'https:';
-    const wsUrl = isSecure ? 'wss://localhost:8080' : 'ws://localhost:8080';
-    
-    let socket = null;
-    let activeGuildId = null;
-    let activeChannel = 'welcome';
+  // Replace with your ngrok/WSS URL if you have one, e.g., 'wss://your-ngrok-url.ngrok-free.app'
+  const wsUrl = 'ws://localhost:8080'; 
+  let socket = null;
+  let activeGuildId = null;
+  let activeChannel = 'welcome';
 
-    function initWebSocket() {
-      try {
-        socket = new WebSocket(wsUrl);
+  function initWebSocket() {
+    try {
+      socket = new WebSocket(wsUrl);
 
-        socket.onopen = () => {
-          document.getElementById('connection-status').innerText = 'Connected';
-          document.getElementById('status-dot').classList.add('online');
-          document.getElementById('ws-error-banner').style.display = 'none';
-          socket.send(JSON.stringify({ type: 'FETCH_SERVERS' }));
-        };
+      socket.onopen = () => {
+        document.getElementById('connection-status').innerText = 'Connected';
+        document.getElementById('status-dot').classList.add('online');
+        document.getElementById('ws-error-banner').style.display = 'none';
+        socket.send(JSON.stringify({ type: 'FETCH_SERVERS' }));
+      };
 
-        socket.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            handleServerEvent(data);
-          } catch (e) {
-            console.error('Data parsing error:', e);
-          }
-        };
-
-        socket.onclose = () => {
-          document.getElementById('connection-status').innerText = 'Disconnected';
-          document.getElementById('status-dot').classList.remove('online');
-          document.getElementById('ws-error-banner').style.display = 'block';
-          setTimeout(initWebSocket, 5000);
-        };
-
-        socket.onerror = (err) => {
-          console.warn('WebSocket connection error:', err);
-        };
-      } catch (err) {
-        console.error('Socket initialization failed:', err);
-      }
-    }
-
-    function handleServerEvent(data) {
-      switch (data.type) {
-        case 'INITIAL_SYNC':
-        case 'SERVER_LIST':
-          renderServers(data.guilds || []);
-          break;
-        case 'VOICE_CHANNELS_LIST':
-          renderVoiceChannels(data.voiceChannels || []);
-          break;
-        case 'MESSAGE_CREATE':
-          appendMessage(data.author, data.content);
-          break;
-      }
-    }
-
-    function renderServers(guilds) {
-      const container = document.getElementById('servers-list');
-      if (!guilds.length) {
-        container.innerHTML = `<div class="server-icon active">S</div>`;
-        return;
-      }
-
-      container.innerHTML = guilds.map((guild, idx) => `
-        <div class="server-icon ${idx === 0 ? 'active' : ''}" 
-             onclick="selectServer('${guild.id}', '${guild.name}', this)">
-          ${guild.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-        </div>
-      `).join('');
-
-      if (guilds.length > 0 && !activeGuildId) {
-        selectServer(guilds[0].id, guilds[0].name, container.children[0]);
-      }
-    }
-
-    function selectServer(guildId, guildName, element) {
-      activeGuildId = guildId;
-      document.getElementById('current-server-name').innerText = guildName;
-      
-      document.querySelectorAll('.server-icon').forEach(el => el.classList.remove('active'));
-      if (element) element.classList.add('active');
-
-      if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ type: 'FETCH_VOICE_CHANNELS', guildId }));
-      }
-      
-      // Default text channels
-      renderTextChannels(['welcome', 'general-chat', 'public-media']);
-    }
-
-    function renderTextChannels(channels) {
-      const container = document.getElementById('text-channels');
-      container.innerHTML = channels.map(ch => `
-        <div class="channel-item ${ch === activeChannel ? 'active' : ''}" onclick="selectChannel('${ch}', this)">
-          <span style="color: var(--text-muted)">#</span> ${ch}
-        </div>
-      `).join('');
-    }
-
-    function selectChannel(channelName, el) {
-      activeChannel = channelName;
-      document.getElementById('current-channel-name').innerText = channelName;
-      document.getElementById('chat-input-field').placeholder = `Message #${channelName}`;
-      
-      document.querySelectorAll('#text-channels .channel-item').forEach(e => e.classList.remove('active'));
-      if (el) el.classList.add('active');
-    }
-
-    function renderVoiceChannels(channels) {
-      const container = document.getElementById('voice-channels');
-      container.innerHTML = channels.map(channel => `
-        <div class="channel-item">
-          <span>🔊</span>
-          <span>${channel.name}</span>
-        </div>
-        ${(channel.members || []).map(member => `
-          <div class="voice-user ${member.isSpeaking ? 'speaking' : ''}">
-            <span>🎙️</span> ${member.username}
-          </div>
-        `).join('')}
-      `).join('');
-    }
-
-    function handleKeyPress(e) {
-      if (e.key === 'Enter') {
-        const input = document.getElementById('chat-input-field');
-        const text = input.value.trim();
-        if (text) {
-          appendMessage('Matthew Plays', text);
-          if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({
-              type: 'SEND_MESSAGE',
-              guildId: activeGuildId,
-              channel: activeChannel,
-              content: text
-            }));
-          }
-          input.value = '';
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          handleServerEvent(data);
+        } catch (e) {
+          console.error('Data parsing error:', e);
         }
+      };
+
+      socket.onclose = () => {
+        handleDisconnect();
+      };
+
+      socket.onerror = () => {
+        handleDisconnect();
+      };
+    } catch (err) {
+      handleDisconnect();
+    }
+  }
+
+  function handleDisconnect() {
+    // Hide the error banner and load demo data so the site works on GitHub Pages
+    document.getElementById('ws-error-banner').style.display = 'none';
+    document.getElementById('connection-status').innerText = 'Demo Mode (Offline)';
+    document.getElementById('status-dot').classList.add('online');
+    
+    // Render mock server & channel data if not connected
+    if (!activeGuildId) {
+      renderServers([{ id: '1', name: 'Sofia and Sharon' }]);
+      renderTextChannels(['welcome', 'general-chat', 'public-media']);
+      renderVoiceChannels([{ name: 'General', members: [{ username: 'Sofag23', isSpeaking: true }] }]);
+    }
+  }
+
+  function handleServerEvent(data) {
+    switch (data.type) {
+      case 'INITIAL_SYNC':
+      case 'SERVER_LIST':
+        renderServers(data.guilds || []);
+        break;
+      case 'VOICE_CHANNELS_LIST':
+        renderVoiceChannels(data.voiceChannels || []);
+        break;
+      case 'MESSAGE_CREATE':
+        appendMessage(data.author, data.content);
+        break;
+    }
+  }
+
+  function renderServers(guilds) {
+    const container = document.getElementById('servers-list');
+    container.innerHTML = guilds.map((guild, idx) => `
+      <div class="server-icon ${idx === 0 ? 'active' : ''}" 
+           onclick="selectServer('${guild.id}', '${guild.name}', this)">
+        ${guild.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+      </div>
+    `).join('');
+
+    if (guilds.length > 0 && !activeGuildId) {
+      selectServer(guilds[0].id, guilds[0].name, container.children[0]);
+    }
+  }
+
+  function selectServer(guildId, guildName, element) {
+    activeGuildId = guildId;
+    document.getElementById('current-server-name').innerText = guildName;
+    
+    document.querySelectorAll('.server-icon').forEach(el => el.classList.remove('active'));
+    if (element) element.classList.add('active');
+
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: 'FETCH_VOICE_CHANNELS', guildId }));
+    }
+  }
+
+  function renderTextChannels(channels) {
+    const container = document.getElementById('text-channels');
+    container.innerHTML = channels.map(ch => `
+      <div class="channel-item ${ch === activeChannel ? 'active' : ''}" onclick="selectChannel('${ch}', this)">
+        <span style="color: var(--text-muted)">#</span> ${ch}
+      </div>
+    `).join('');
+  }
+
+  function selectChannel(channelName, el) {
+    activeChannel = channelName;
+    document.getElementById('current-channel-name').innerText = channelName;
+    document.getElementById('chat-input-field').placeholder = `Message #${channelName}`;
+    
+    document.querySelectorAll('#text-channels .channel-item').forEach(e => e.classList.remove('active'));
+    if (el) el.classList.add('active');
+  }
+
+  function renderVoiceChannels(channels) {
+    const container = document.getElementById('voice-channels');
+    container.innerHTML = channels.map(channel => `
+      <div class="channel-item">
+        <span>🔊</span>
+        <span>${channel.name}</span>
+      </div>
+      ${(channel.members || []).map(member => `
+        <div class="voice-user ${member.isSpeaking ? 'speaking' : ''}">
+          <span>🎙️</span> ${member.username}
+        </div>
+      `).join('')}
+    `).join('');
+  }
+
+  function handleKeyPress(e) {
+    if (e.key === 'Enter') {
+      const input = document.getElementById('chat-input-field');
+      const text = input.value.trim();
+      if (text) {
+        appendMessage('Matthew Plays', text);
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({
+            type: 'SEND_MESSAGE',
+            guildId: activeGuildId,
+            channel: activeChannel,
+            content: text
+          }));
+        }
+        input.value = '';
       }
     }
+  }
 
-    function appendMessage(author, content) {
-      const chatContainer = document.getElementById('chat-messages');
-      const msgDiv = document.createElement('div');
-      msgDiv.className = 'msg-row';
-      msgDiv.innerHTML = `
-        <div class="user-avatar">${author[0].toUpperCase()}</div>
-        <div class="msg-content">
-          <span class="msg-author">${author}</span>
-          <span class="msg-text">${content}</span>
-        </div>
-      `;
-      chatContainer.appendChild(msgDiv);
-      chatContainer.scrollTop = chatContainer.scrollHeight;
-    }
+  function appendMessage(author, content) {
+    const chatContainer = document.getElementById('chat-messages');
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'msg-row';
+    msgDiv.innerHTML = `
+      <div class="user-avatar">${author[0].toUpperCase()}</div>
+      <div class="msg-content">
+        <span class="msg-author">${author}</span>
+        <span class="msg-text">${content}</span>
+      </div>
+    `;
+    chatContainer.appendChild(msgDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  }
 
-    // Start WebSocket Connection
-    initWebSocket();
-  </script>
+  initWebSocket();
+</script>
 </body>
 </html>
